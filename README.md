@@ -63,10 +63,10 @@ The pencil unsets the value; leaving the field without picking keeps it empty.
 
 ## Releasing
 
-Releases are published to npm by GitHub Actions ([`publish.yml`](.github/workflows/publish.yml)); nobody runs `npm publish` locally.
+Releases are published to npm by GitHub Actions ([`publish.yml`](.github/workflows/publish.yml)); nobody runs `npm publish` locally. (0.1.0, the first release, was published by hand: npm trusted publishing can only be set up once a package exists.)
 
 1. Bump `version` in `package.json` in your PR.
-2. Merge it to `master`. The workflow runs lint, typecheck and build, publishes that version to npm with provenance, then tags `v<version>` and creates a GitHub release. Prerelease versions (e.g. `1.0.0-beta.1`) publish under the `next` dist-tag.
+2. Merge it to `master`. The workflow runs lint, typecheck, tests and build, publishes that version to npm with provenance, then tags `v<version>` and creates a GitHub release. Prerelease versions (e.g. `1.0.0-beta.1`) publish under the `next` dist-tag.
 
 Merges that don't change the version publish nothing. To retry a failed publish, run the workflow from the Actions tab.
 
