@@ -71,7 +71,11 @@ function ItemList({
   )
 }
 
-/** The picked item, shown like the color select's preset row: preview left, pencil right. */
+/**
+ * The picked item, shown like the color select's preset row: the preview is a bleed button with
+ * the native hover that opens the list (the value stays until another is picked), and the pencil
+ * on the right clears it and reopens the search.
+ */
 function SelectedItem({
   item,
   readOnly,
@@ -80,6 +84,8 @@ function SelectedItem({
   focusRef,
   onFieldFocus,
   onFieldBlur,
+  onOpen,
+  onEscape,
   onReplace,
 }: {
   item: Pick<VariantItem, 'title' | 'icon'>
@@ -87,20 +93,45 @@ function SelectedItem({
   /** A validation error: the row takes the critical tone, like a native input. */
   invalid?: boolean
   /**
-   * Sanity's focus wiring, on the pencil (the row's only control), so jumping to the field from a
-   * validation message, the label and presence all work.
+   * Sanity's focus wiring, on the preview button (the row's main control), so the label,
+   * jumping to the field from a validation message and presence all work.
    */
   fieldId?: string
   focusRef?: React.Ref<HTMLButtonElement>
   onFieldFocus?: React.FocusEventHandler<HTMLButtonElement>
   onFieldBlur?: React.FocusEventHandler<HTMLButtonElement>
+  onOpen: () => void
+  onEscape: () => void
   onReplace: () => void
 }) {
   return (
     <Card border radius={2} overflow="hidden" tone={invalid ? 'critical' : undefined}>
       <Flex align="center" style={{height: 33}}>
-        <Box flex={1} paddingX={1} style={{minWidth: 0}}>
-          <ItemPreview item={item} />
+        <Box flex={1} style={{minWidth: 0}}>
+          {readOnly ? (
+            <Box paddingX={1}>
+              <ItemPreview item={item} />
+            </Box>
+          ) : (
+            <Button
+              id={fieldId}
+              ref={focusRef}
+              mode="bleed"
+              // Exactly the row's height, like the color select: padding would overflow the row
+              // and push the clipped hover out to the border.
+              padding={0}
+              width="fill"
+              style={{clipPath: 'inset(3px round 2px)'}}
+              onFocus={onFieldFocus}
+              onBlur={onFieldBlur}
+              onClick={onOpen}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') onEscape()
+              }}
+            >
+              <ItemPreview item={item} />
+            </Button>
+          )}
         </Box>
         {!readOnly && (
           <Tooltip
@@ -114,14 +145,10 @@ function SelectedItem({
             }
           >
             <Button
-              id={fieldId}
-              ref={focusRef}
               aria-label="Replace variant"
               icon={EditIcon}
               mode="bleed"
               style={{clipPath: 'inset(3px round 2px)'}}
-              onFocus={onFieldFocus}
-              onBlur={onFieldBlur}
               onClick={onReplace}
             />
           </Tooltip>
@@ -141,8 +168,8 @@ function assignRefs<T>(node: T | null, ...refs: Array<React.Ref<T> | undefined>)
 
 /**
  * A string input, like the color select: with no value, an input with a popover listing the
- * field's `options.list` (typing searches it); with a value, the picked item and a pencil that
- * clears it and reopens the search.
+ * field's `options.list` (typing searches it); with a value, the picked item, which opens the
+ * same list, and a pencil that clears it and reopens the search.
  */
 export function VariantPickerInput(props: StringInputProps) {
   const {value, onChange, readOnly, elementProps, schemaType, validationError, validation} = props
@@ -207,7 +234,7 @@ export function VariantPickerInput(props: StringInputProps) {
   return (
     <>
       <Popover
-        open={open && !readOnly && !selected}
+        open={open && !readOnly}
         referenceElement={container}
         portal
         placement="bottom-start"
@@ -250,6 +277,8 @@ export function VariantPickerInput(props: StringInputProps) {
             onFieldBlur={
               elementProps.onBlur as unknown as React.FocusEventHandler<HTMLButtonElement>
             }
+            onOpen={() => setOpen((wasOpen) => !wasOpen)}
+            onEscape={close}
             onReplace={replace}
           />
         ) : (
