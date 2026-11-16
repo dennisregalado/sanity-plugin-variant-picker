@@ -1,12 +1,8 @@
 # sanity-plugin-variant-picker
 
-A Sanity Studio color field built like a link picker: one input, a popover, and **shared color presets** your whole dataset references.
+A Sanity Studio field built like a link picker: one input and a popover. Forked from [sanity-plugin-color-select](https://github.com/dennisregalado/sanity-plugin-color-select), with its presets and color picker removed.
 
-- **Color presets**: documents with a title and a color. Pick one and the field stores a weak reference _and_ a snapshot of the color, so GROQ never has to dereference.
-- **Picker**: saturation/brightness area, hue and opacity sliders, HEX / RGB / HSL / OKLCH inputs, an eyedropper (Chromium) and copy to clipboard.
-- **Search or paste**: type a preset's title or hex to search presets, or paste any CSS color (`#AE2525`, `rgb(…)`, `hsl(…)`, `oklch(…)`) to apply it immediately.
-- **Save as preset** inline: turn the current color into a preset right from the field, then name it.
-- **Modes**: presets only, picker only, or both.
+- **Paste**: paste any CSS color (`#AE2525`, `rgb(…)`, `hsl(…)`, `oklch(…)`) to apply it immediately, or type one and press Enter.
 - **Portable Text** text-color and highlight marks with the same UI.
 - **A GROQ-friendly value**: `css`, `hex`, `alpha`, `rgb`, `hsl`, `hsv` and `oklch`, written by the Studio so your frontend doesn't convert anything.
 
@@ -16,7 +12,7 @@ A Sanity Studio color field built like a link picker: one input, a popover, and 
 npm install sanity-plugin-variant-picker
 ```
 
-**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) and `@sanity/icons` (v5) are peer dependencies, and `sanity` already installs them, so there's nothing else to add. The plugin uses your Studio's copy. On Sanity 5, stay on 0.2.x (`npm install sanity-plugin-variant-picker@0.2`).
+**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) and `@sanity/icons` (v5) are peer dependencies, and `sanity` already installs them, so there's nothing else to add. The plugin uses your Studio's copy.
 
 ```ts
 // sanity.config.ts
@@ -49,46 +45,13 @@ Pass options to the plugin to set defaults for every field. A field's `options` 
 variantPicker({
   format: 'hex', // 'hex' | 'rgb' | 'hsl' | 'oklch'
   alpha: true,
-  paletteOnly: false,
-  pickerOnly: false,
-  presetType: 'variantPreset',
-})
-
-defineField({
-  name: 'brandColor',
-  type: 'variantPicker',
-  options: {paletteOnly: true},
 })
 ```
 
-| Option        | Default         |                                                                                                                                                             |
-| ------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `format`      | `'hex'`         | How `value.css` is written, and the picker's starting input mode.                                                                                           |
-| `alpha`       | `true`          | Show the opacity slider and keep alpha in the value.                                                                                                        |
-| `paletteOnly` | `false`         | Only presets: no picker, no custom colors, no saving. A custom value fails validation.                                                                      |
-| `pickerOnly`  | `false`         | Only the picker: no presets, search, saving or references. Wins over `paletteOnly`.                                                                         |
-| `presetType`  | `'variantPreset'` | Name of the preset document type (plugin-level only).                                                                                                       |
-| `presets`     | —               | Field-level only. Limit the field to these preset document IDs, in this order. Saving new presets from the field is off, and other presets fail validation. |
-
-Limit a field to some presets, e.g. backgrounds that must stay dark under light text:
-
-```ts
-defineField({
-  name: 'background',
-  type: 'variantPicker',
-  options: {paletteOnly: true, presets: ['variantPreset-charcoal', 'variantPreset-oxide']},
-})
-```
-
-### Color presets
-
-The plugin registers a `variantPreset` document type with a `title` and a `color`. Add it to your structure if you want a list of presets:
-
-```ts
-S.documentTypeListItem('variantPreset').title('Color presets')
-```
-
-Editors can also create presets from any color field: pick a color, click **Save as preset**, and name it.
+| Option   | Default |                             |
+| -------- | ------- | --------------------------- |
+| `format` | `'hex'` | How `value.css` is written. |
+| `alpha`  | `true`  | Keep alpha in the value.    |
 
 ### Portable Text marks
 
@@ -110,8 +73,6 @@ The Studio editor renders marked text in its color. Each mark stores the same ob
 ```ts
 {
   _type: 'variantPicker',
-  // Only when a preset was picked:
-  reference: {_type: 'reference', _ref: '…', _weak: true},
   value: {
     _type: 'variantPickerValue',
     css: '#AE2525', // in the field's `format`, ready to use
@@ -125,20 +86,11 @@ The Studio editor renders marked text in its color. Each mark stores the same ob
 }
 ```
 
-A preset's `color` has the same `variantPickerValue` shape.
-
-When a field references a preset, `value` is a snapshot of the preset's color, taken when the preset was picked. Opening a document never writes to it; it's refreshed the next time an editor changes the field. If a preset's color may change after it's been picked, read the live color first:
-
-```groq
-"background": coalesce(background.reference->color.css, background.value.css)
-```
-
 ## GROQ
 
 ```groq
 *[_type == "page"][0]{
-  "background": coalesce(background.reference->color.css, background.value.css),
-  "backgroundName": background.reference->title,
+  "background": background.value.css,
   "backgroundRgb": background.value.rgb,
 }
 ```
