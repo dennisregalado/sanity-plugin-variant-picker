@@ -45,9 +45,10 @@ function ItemList({
       </Box>
       {items.length > 0 ? (
         <Stack gap={1} style={{maxHeight: 390, overflowY: 'auto'}}>
-          {items.map((item) => (
+          {items.map((item, index) => (
             <Button
-              key={item._key ?? item.value}
+              // Lists may repeat a value; the index keeps keys unique.
+              key={item._key ?? `${item.value}-${index}`}
               mode="bleed"
               width="fill"
               padding={1}
@@ -74,14 +75,29 @@ function ItemList({
 function SelectedItem({
   item,
   readOnly,
+  invalid,
+  fieldId,
+  focusRef,
+  onFieldFocus,
+  onFieldBlur,
   onReplace,
 }: {
   item: Pick<VariantItem, 'title' | 'icon'>
   readOnly?: boolean
+  /** A validation error: the row takes the critical tone, like a native input. */
+  invalid?: boolean
+  /**
+   * Sanity's focus wiring, on the pencil (the row's only control), so jumping to the field from a
+   * validation message, the label and presence all work.
+   */
+  fieldId?: string
+  focusRef?: React.Ref<HTMLButtonElement>
+  onFieldFocus?: React.FocusEventHandler<HTMLButtonElement>
+  onFieldBlur?: React.FocusEventHandler<HTMLButtonElement>
   onReplace: () => void
 }) {
   return (
-    <Card border radius={2} overflow="hidden">
+    <Card border radius={2} overflow="hidden" tone={invalid ? 'critical' : undefined}>
       <Flex align="center" style={{height: 33}}>
         <Box flex={1} paddingX={1} style={{minWidth: 0}}>
           <ItemPreview item={item} />
@@ -98,10 +114,14 @@ function SelectedItem({
             }
           >
             <Button
+              id={fieldId}
+              ref={focusRef}
               aria-label="Replace variant"
               icon={EditIcon}
               mode="bleed"
               style={{clipPath: 'inset(3px round 2px)'}}
+              onFocus={onFieldFocus}
+              onBlur={onFieldBlur}
               onClick={onReplace}
             />
           </Tooltip>
@@ -125,7 +145,14 @@ function assignRefs<T>(node: T | null, ...refs: Array<React.Ref<T> | undefined>)
  * clears it and reopens the search.
  */
 export function VariantPickerInput(props: StringInputProps) {
-  const {value, onChange, readOnly, elementProps, schemaType} = props
+  const {value, onChange, readOnly, elementProps, schemaType, validationError, validation} = props
+  const invalid = validation.some((marker) => marker.level === 'error')
+  // Sanity drops a field-level `placeholder` on types that extend `string` (only `options` and a
+  // few other keys carry over), so `options.placeholder` is the way to set one per field.
+  const placeholder =
+    (schemaType.options as {placeholder?: string} | undefined)?.placeholder ||
+    (schemaType as {placeholder?: string}).placeholder ||
+    'Search a variant'
   const items = useMemo(() => toItems(schemaType.options?.list), [schemaType.options?.list])
   // A stored value missing from the list still shows, as its raw value.
   const selected = value
@@ -211,7 +238,20 @@ export function VariantPickerInput(props: StringInputProps) {
       />
       <Box ref={setContainer}>
         {selected ? (
-          <SelectedItem item={selected} readOnly={readOnly} onReplace={replace} />
+          <SelectedItem
+            item={selected}
+            readOnly={readOnly}
+            invalid={invalid}
+            fieldId={elementProps.id}
+            focusRef={elementProps.ref as unknown as React.Ref<HTMLButtonElement>}
+            onFieldFocus={
+              elementProps.onFocus as unknown as React.FocusEventHandler<HTMLButtonElement>
+            }
+            onFieldBlur={
+              elementProps.onBlur as unknown as React.FocusEventHandler<HTMLButtonElement>
+            }
+            onReplace={replace}
+          />
         ) : (
           <TextInput
             {...elementProps}
@@ -223,7 +263,8 @@ export function VariantPickerInput(props: StringInputProps) {
               )
             }
             readOnly={readOnly}
-            placeholder={elementProps.placeholder || 'Search a variant'}
+            customValidity={validationError}
+            placeholder={placeholder}
             fontSize={1}
             weight="medium"
             value={query}

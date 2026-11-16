@@ -48,7 +48,7 @@ defineField({
 })
 ```
 
-`icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. A field's `placeholder` replaces the default "Search a variant". Items without a `value` are skipped.
+`icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Set a field's placeholder with `options.placeholder` (default "Search a variant"): Sanity drops a field-level `placeholder` on types that extend `string`. Items without a `value` are skipped.
 
 ## Stored value
 

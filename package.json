@@ -40,7 +40,8 @@
     "format": "prettier --write --cache --ignore-unknown .",
     "link-watch": "plugin-kit link-watch",
     "lint": "eslint .",
-    "prepublishOnly": "npm run lint && npm run typecheck && npm run build",
+    "test": "vitest run",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build",
     "typecheck": "tsc --noEmit",
     "watch": "pkg-utils watch --strict"
   },
@@ -65,7 +66,8 @@
     "react-dom": "^19.2.7",
     "sanity": "^6.23.0",
     "styled-components": "^6.4.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.4"
   },
   "peerDependencies": {
     "@sanity/icons": "^5",

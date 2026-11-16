@@ -50,7 +50,7 @@ jobs:
           bun-version: 1.4.4
       - if: steps.version.outputs.publish == 'true'
         run: bun install --frozen-lockfile
-      # prepublishOnly runs lint, typecheck and the build.
+      # prepublishOnly runs lint, typecheck, tests and the build.
       - if: steps.version.outputs.publish == 'true'
         env:
           VERSION: ${{ steps.version.outputs.version }}

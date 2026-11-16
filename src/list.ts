@@ -39,16 +39,16 @@ function toIconNode(icon: VariantIcon | undefined): React.ReactNode {
 export function toItems(list: StringOptions['list']): VariantItem[] {
   return (list ?? []).flatMap((option: unknown) => {
     if (isTitled(option)) {
-      return option.value === undefined
-        ? []
-        : [
-            {
-              _key: option._key,
-              title: option.title,
-              value: option.value,
-              icon: toIconNode(option.icon),
-            },
-          ]
+      // A string field stores strings: other values can't be picked (or searched) safely.
+      if (typeof option.value !== 'string') return []
+      return [
+        {
+          _key: option._key,
+          title: String(option.title ?? option.value),
+          value: option.value,
+          icon: toIconNode(option.icon),
+        },
+      ]
     }
     return typeof option === 'string' ? [{title: capitalize(option), value: option}] : []
   })
