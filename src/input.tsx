@@ -1,11 +1,62 @@
-import {Box, Card, TextInput, useClickOutsideEvent} from '@sanity/ui'
+import {Box, Button, Card, Stack, Text, TextInput, useClickOutsideEvent} from '@sanity/ui'
 import {Popover} from '@sanity/ui/popover'
 import React, {useCallback, useMemo, useRef, useState} from 'react'
-import {set, unset} from 'sanity'
+import {SanityDefaultPreview, set, unset, type StringInputProps} from 'sanity'
 
-import {formatColor, fromColorValue, parseColor, toColorValue, type ColorValue} from './color'
-import {ColorSwatch} from './swatch'
-import type {ColorPickerInputProps} from './types'
+import {filterItems, toItems, type VariantItem} from './list'
+
+/**
+ * Keep focus in the field while clicking inside the popover. Otherwise the field's blur clears
+ * the search and swaps the popover content before the click lands.
+ */
+const keepInputFocus = (event: React.MouseEvent) => event.preventDefault()
+
+function ItemList({
+  items,
+  label,
+  empty,
+  selected,
+  onSelect,
+}: {
+  items: VariantItem[]
+  label: string
+  empty: string
+  selected?: string
+  onSelect: (item: VariantItem) => void
+}) {
+  return (
+    <Stack gap={1}>
+      <Box paddingX={2} paddingY={3}>
+        <Text size={1} weight="medium">
+          {label}
+        </Text>
+      </Box>
+      {items.length > 0 ? (
+        <Stack gap={1} style={{maxHeight: 390, overflowY: 'auto'}}>
+          {items.map((item) => (
+            <Button
+              key={item._key ?? item.value}
+              mode="bleed"
+              width="fill"
+              padding={1}
+              selected={item.value === selected}
+              onMouseDown={keepInputFocus}
+              onClick={() => onSelect(item)}
+            >
+              <SanityDefaultPreview layout="compact" title={item.title} icon={false} />
+            </Button>
+          ))}
+        </Stack>
+      ) : (
+        <Box paddingX={2} paddingBottom={3}>
+          <Text size={1} muted>
+            {empty}
+          </Text>
+        </Box>
+      )}
+    </Stack>
+  )
+}
 
 /** Points each ref (callback or object) at `node`. */
 function assignRefs<T>(node: T | null, ...refs: Array<React.Ref<T> | undefined>) {
@@ -15,37 +66,22 @@ function assignRefs<T>(node: T | null, ...refs: Array<React.Ref<T> | undefined>)
   }
 }
 
-/** Same color, format and alpha: nothing to write. */
-function sameValue(a: Partial<ColorValue> | null | undefined, b: ColorValue): boolean {
-  return Boolean(a && a.css === b.css && a.hex === b.hex && a.alpha === b.alpha && a.hsv)
-}
-
 /**
- * `variantPicker` fields: one input with a popover, like the link picker. Typing or pasting a
- * color writes the resolved color to `value`. Nothing is written just by opening a document.
+ * A string input, like the link picker: one input with a popover listing the field's
+ * `options.list`. Typing searches the list; picking an item writes its `value`.
  */
-export function ColorPickerInput(props: ColorPickerInputProps) {
-  const {value, onChange, readOnly, elementProps, schemaType, defaults} = props
-  const format = schemaType.options?.format ?? defaults.format
-  const alpha = schemaType.options?.alpha ?? defaults.alpha
-
-  const storedValue = value?.value
-  const key = value?._key
-  const keyed = useMemo(() => (key ? {_key: key} : {}), [key])
-  const typeName = schemaType.name
-
-  const stored = useMemo(() => fromColorValue(storedValue), [storedValue])
-  const storedText = storedValue?.css ?? ''
+export function VariantPickerInput(props: StringInputProps) {
+  const {value, onChange, readOnly, elementProps, schemaType} = props
+  const items = useMemo(() => toItems(schemaType.options?.list), [schemaType.options?.list])
+  const selected = items.find((item) => item.value === value)
 
   const [open, setOpen] = useState(false)
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
-  // Text typed in the field: a color to apply on blur or Enter.
+  // Text typed in the field: a search over the list.
   const [typed, setTyped] = useState<string | null>(null)
-
-  const typedColor = parseColor(typed)
-  const shown = typedColor ?? stored
-  const shownCss = shown ? formatColor(shown, 'rgb', alpha) : ''
+  const query = typed ?? ''
+  const matches = useMemo(() => filterItems(items, query), [items, query])
 
   const close = useCallback(() => {
     setOpen(false)
@@ -54,25 +90,20 @@ export function ColorPickerInput(props: ColorPickerInputProps) {
 
   useClickOutsideEvent(open && close, () => [container, popoverRef.current])
 
-  const setColor = (next: ColorValue) => {
-    if (sameValue(storedValue, next)) return
-    onChange(set({...keyed, _type: typeName, value: next}))
+  const select = (item: VariantItem) => {
+    if (item.value !== value) onChange(set(item.value))
+    close()
   }
 
+  // Leaving the field: an emptied field clears the value; any other search is dropped.
   const commitTyped = () => {
-    if (typedColor) setColor(toColorValue(typedColor, format, alpha))
-    else if (typed !== null && !typed.trim() && storedValue) onChange(unset())
+    if (typed !== null && !typed.trim() && value) onChange(unset())
     setTyped(null)
   }
 
-  /** Paste replaces the color, wherever the caret is, and applies right away (no blur needed). */
-  const pasteColor = (text: string): boolean => {
-    const color = parseColor(text.trim())
-    if (!color) return false
-    setTyped(null)
-    setColor(toColorValue(color, format, alpha))
-    return true
-  }
+  let label = 'Variants'
+  if (query.trim()) label = `${matches.length} ${matches.length === 1 ? 'result' : 'results'}`
+  const empty = query.trim() ? `No variants match “${query.trim()}”` : 'No variants'
 
   return (
     <>
@@ -95,34 +126,34 @@ export function ColorPickerInput(props: ColorPickerInputProps) {
             onKeyDown={(event) => {
               if (event.key === 'Escape') close()
             }}
-          />
+          >
+            <ItemList
+              items={matches}
+              label={label}
+              empty={empty}
+              selected={value}
+              onSelect={select}
+            />
+          </Card>
         }
       />
-      <Box ref={setContainer} style={{position: 'relative'}}>
-        {shownCss && (
-          <Box style={{position: 'absolute', top: 5, left: 5, zIndex: 1, pointerEvents: 'none'}}>
-            <ColorSwatch color={shownCss} size={25} />
-          </Box>
-        )}
+      <Box ref={setContainer}>
         <TextInput
           {...elementProps}
           ref={(node) =>
             assignRefs(node, elementProps.ref as React.Ref<HTMLInputElement> | undefined)
           }
           readOnly={readOnly}
-          placeholder="Paste a color"
+          placeholder={elementProps.placeholder || 'Search a variant'}
           fontSize={1}
           weight="medium"
-          value={typed ?? storedText}
-          style={{height: 35, ...(shownCss ? {paddingLeft: 38} : {})}}
+          value={typed ?? selected?.title ?? value ?? ''}
+          style={{height: 35}}
           onFocus={(event) => {
             elementProps.onFocus(event)
             setOpen(true)
           }}
           onClick={() => setOpen(true)}
-          onPaste={(event) => {
-            if (pasteColor(event.clipboardData.getData('text'))) event.preventDefault()
-          }}
           onChange={(event) => {
             setTyped(event.currentTarget.value)
             setOpen(true)
@@ -134,7 +165,9 @@ export function ColorPickerInput(props: ColorPickerInputProps) {
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
-              commitTyped()
+              // Enter picks the first match of a search.
+              if (query.trim() && matches[0]) select(matches[0])
+              else commitTyped()
             }
             if (event.key === 'Escape') close()
           }}

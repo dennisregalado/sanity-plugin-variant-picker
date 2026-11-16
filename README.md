@@ -1,10 +1,10 @@
 # sanity-plugin-variant-picker
 
-A Sanity Studio field built like a link picker: one input and a popover. Forked from [sanity-plugin-color-select](https://github.com/dennisregalado/sanity-plugin-color-select), with its presets and color picker removed.
+A Sanity Studio `string` field built like a link picker: one input and a popover that searches the field's `options.list`. Forked from [sanity-plugin-color-select](https://github.com/dennisregalado/sanity-plugin-color-select).
 
-- **Paste**: paste any CSS color (`#AE2525`, `rgb(…)`, `hsl(…)`, `oklch(…)`) to apply it immediately, or type one and press Enter.
-- **Portable Text** text-color and highlight marks with the same UI.
-- **A GROQ-friendly value**: `css`, `hex`, `alpha`, `rgb`, `hsl`, `hsv` and `oklch`, written by the Studio so your frontend doesn't convert anything.
+- **Native options**: reads `options.list` exactly like a `string` field, so `{title, value}` items and plain strings both work.
+- **Search**: type to filter by title or value; Enter picks the first match.
+- **A plain string value**: stores the picked item's `value`, the same as a native string select.
 
 ## Install
 
@@ -12,7 +12,7 @@ A Sanity Studio field built like a link picker: one input and a popover. Forked 
 npm install sanity-plugin-variant-picker
 ```
 
-**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) and `@sanity/icons` (v5) are peer dependencies, and `sanity` already installs them, so there's nothing else to add. The plugin uses your Studio's copy.
+**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) is a peer dependency, and `sanity` already installs it, so there's nothing else to add. The plugin uses your Studio's copy.
 
 ```ts
 // sanity.config.ts
@@ -31,91 +31,31 @@ export default defineConfig({
 import {defineField} from 'sanity'
 
 defineField({
-  name: 'background',
-  title: 'Background',
+  name: 'size',
+  title: 'Size',
   type: 'variantPicker',
-})
-```
-
-### Options
-
-Pass options to the plugin to set defaults for every field. A field's `options` override them.
-
-```ts
-variantPicker({
-  format: 'hex', // 'hex' | 'rgb' | 'hsl' | 'oklch'
-  alpha: true,
-})
-```
-
-| Option   | Default |                             |
-| -------- | ------- | --------------------------- |
-| `format` | `'hex'` | How `value.css` is written. |
-| `alpha`  | `true`  | Keep alpha in the value.    |
-
-### Portable Text marks
-
-Add text color and highlight to a block's annotations:
-
-```ts
-defineArrayMember({
-  type: 'block',
-  marks: {
-    annotations: [{type: 'variantText'}, {type: 'variantHighlight'}],
+  options: {
+    list: [
+      {title: 'Small', value: 'sm'},
+      {title: 'Medium', value: 'md'},
+      'large', // shown as "Large", stored as "large"
+    ],
   },
 })
 ```
 
-The Studio editor renders marked text in its color. Each mark stores the same object as a field.
+A field's `placeholder` replaces the default "Search a variant". Items without a `value` are skipped.
 
 ## Stored value
 
-```ts
-{
-  _type: 'variantPicker',
-  value: {
-    _type: 'variantPickerValue',
-    css: '#AE2525', // in the field's `format`, ready to use
-    hex: '#AE2525', // always 6-digit, without alpha
-    alpha: 1,
-    rgb: {r: 174, g: 37, b: 37, a: 1},
-    hsl: {h: 0, s: 0.649, l: 0.414, a: 1},
-    hsv: {h: 0, s: 0.787, v: 0.682, a: 1},
-    oklch: {l: 0.492, c: 0.173, h: 26.4, a: 1},
-  },
-}
-```
-
-## GROQ
+The picked item's `value`, as a string:
 
 ```groq
-*[_type == "page"][0]{
-  "background": background.value.css,
-  "backgroundRgb": background.value.rgb,
-}
+*[_type == "product"][0]{size}
+// {"size": "sm"}
 ```
 
-Portable Text marks:
-
-```groq
-content[]{
-  ...,
-  markDefs[]{
-    ...,
-    _type in ["variantText", "variantHighlight"] => {"color": value.css}
-  }
-}
-```
-
-## Utilities
-
-The color helpers the input uses are exported for frontends that need them:
-
-```ts
-import {parseColor, formatColor} from 'sanity-plugin-variant-picker'
-
-formatColor(parseColor('#AE2525')!, 'oklch') // 'oklch(49.2% 0.173 26.4)'
-```
+Clearing the field (empty it and leave) unsets the value.
 
 ## Releasing
 
