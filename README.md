@@ -3,7 +3,9 @@
 A Sanity Studio `string` field built like a link picker: one input and a popover that searches the field's `options.list`. Forked from [sanity-plugin-color-select](https://github.com/dennisregalado/sanity-plugin-color-select).
 
 - **Native options**: reads `options.list` exactly like a `string` field, so `{title, value}` items and plain strings both work.
+- **Icons**: give an item an `icon` and it shows on the left, in the list and on the picked value.
 - **Search**: type to filter by title or value; Enter picks the first match.
+- **Picked value**: shown as a native preview row with a pencil on the right that clears it and reopens the search, like sanity-plugin-color-select.
 - **A plain string value**: stores the picked item's `value`, the same as a native string select.
 
 ## Install
@@ -12,7 +14,7 @@ A Sanity Studio `string` field built like a link picker: one input and a popover
 npm install sanity-plugin-variant-picker
 ```
 
-**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) is a peer dependency, and `sanity` already installs it, so there's nothing else to add. The plugin uses your Studio's copy.
+**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) and `@sanity/icons` (v5) are peer dependencies, and `sanity` already installs them, so there's nothing else to add. The plugin uses your Studio's copy.
 
 ```ts
 // sanity.config.ts
@@ -29,6 +31,8 @@ export default defineConfig({
 
 ```ts
 import {defineField} from 'sanity'
+import MoonIcon from '@sanity/icons/Moon'
+import SunIcon from '@sanity/icons/Sun'
 
 defineField({
   name: 'size',
@@ -36,15 +40,15 @@ defineField({
   type: 'variantPicker',
   options: {
     list: [
-      {title: 'Small', value: 'sm'},
-      {title: 'Medium', value: 'md'},
+      {title: 'Small', value: 'sm', icon: SunIcon},
+      {title: 'Medium', value: 'md', icon: MoonIcon},
       'large', // shown as "Large", stored as "large"
     ],
   },
 })
 ```
 
-A field's `placeholder` replaces the default "Search a variant". Items without a `value` are skipped.
+`icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. A field's `placeholder` replaces the default "Search a variant". Items without a `value` are skipped.
 
 ## Stored value
 
@@ -55,7 +59,7 @@ The picked item's `value`, as a string:
 // {"size": "sm"}
 ```
 
-Clearing the field (empty it and leave) unsets the value.
+The pencil unsets the value; leaving the field without picking keeps it empty.
 
 ## Releasing
 
