@@ -191,7 +191,7 @@ type ColorFieldProps = {
 
 /**
  * The field UI, like the link picker: one input with a popover holding the picker and presets.
- * Shared by `colorPicker` fields and the preset document's `color`; each maps the callbacks onto
+ * Shared by `variantPicker` fields and the preset document's `color`; each maps the callbacks onto
  * its own value shape.
  */
 function ColorField(props: ColorFieldProps) {
@@ -515,7 +515,7 @@ function ColorField(props: ColorFieldProps) {
 }
 
 /**
- * `colorPicker` fields: every change writes the resolved color to `value`; a preset also stores
+ * `variantPicker` fields: every change writes the resolved color to `value`; a preset also stores
  * a weak `reference`, with `value` as a snapshot of its color taken when it was picked. Nothing is
  * written just by opening a document.
  */

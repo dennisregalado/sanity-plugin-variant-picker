@@ -14,7 +14,7 @@ export type ColorReferenceValue = {
  */
 export type ColorPickerValue = {
   _key?: string
-  _type?: 'colorPicker'
+  _type?: 'variantPicker'
   value?: ColorValue | null
   reference?: ColorReferenceValue | null
 }
@@ -38,9 +38,9 @@ export interface ColorOptions {
   pickerOnly?: boolean
 }
 
-/** Options for the plugin (argument to `colorPicker`). */
+/** Options for the plugin (argument to `variantPicker`). */
 export interface ColorPickerPluginOptions extends ColorOptions {
-  /** Name of the color preset document type. Defaults to `colorPreset`. */
+  /** Name of the color preset document type. Defaults to `variantPreset`. */
   presetType?: string
 }
 

@@ -1,7 +1,7 @@
 {
-  "name": "sanity-plugin-color-select",
-  "version": "0.3.0",
-  "description": "A Sanity Studio color field with shared color presets, a picker with alpha and HEX/RGB/HSL/OKLCH, and Portable Text color marks.",
+  "name": "sanity-plugin-variant-picker",
+  "version": "0.0.0",
+  "description": "A Sanity Studio variant picker field. Forked from sanity-plugin-color-select.",
   "keywords": [
     "sanity",
     "sanity-plugin",
@@ -10,13 +10,13 @@
     "color-presets",
     "portable-text"
   ],
-  "homepage": "https://github.com/dennisregalado/sanity-plugin-color-select#readme",
+  "homepage": "https://github.com/dennisregalado/sanity-plugin-variant-picker#readme",
   "bugs": {
-    "url": "https://github.com/dennisregalado/sanity-plugin-color-select/issues"
+    "url": "https://github.com/dennisregalado/sanity-plugin-variant-picker/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dennisregalado/sanity-plugin-color-select.git"
+    "url": "git+https://github.com/dennisregalado/sanity-plugin-variant-picker.git"
   },
   "license": "MIT",
   "author": "Dennis Regalado <dennis@baggy.studio>",

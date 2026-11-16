@@ -1,4 +1,4 @@
-# sanity-plugin-color-select
+# sanity-plugin-variant-picker
 
 A Sanity Studio color field built like a link picker: one input, a popover, and **shared color presets** your whole dataset references.
 
@@ -13,19 +13,19 @@ A Sanity Studio color field built like a link picker: one input, a popover, and 
 ## Install
 
 ```sh
-npm install sanity-plugin-color-select
+npm install sanity-plugin-variant-picker
 ```
 
-**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) and `@sanity/icons` (v5) are peer dependencies, and `sanity` already installs them, so there's nothing else to add. The plugin uses your Studio's copy. On Sanity 5, stay on 0.2.x (`npm install sanity-plugin-color-select@0.2`).
+**Requirements:** Sanity Studio 6. `@sanity/ui` (v4) and `@sanity/icons` (v5) are peer dependencies, and `sanity` already installs them, so there's nothing else to add. The plugin uses your Studio's copy. On Sanity 5, stay on 0.2.x (`npm install sanity-plugin-variant-picker@0.2`).
 
 ```ts
 // sanity.config.ts
 import {defineConfig} from 'sanity'
-import {colorPicker} from 'sanity-plugin-color-select'
+import {variantPicker} from 'sanity-plugin-variant-picker'
 
 export default defineConfig({
   // ...
-  plugins: [colorPicker()],
+  plugins: [variantPicker()],
 })
 ```
 
@@ -37,7 +37,7 @@ import {defineField} from 'sanity'
 defineField({
   name: 'background',
   title: 'Background',
-  type: 'colorPicker',
+  type: 'variantPicker',
 })
 ```
 
@@ -46,17 +46,17 @@ defineField({
 Pass options to the plugin to set defaults for every field. A field's `options` override them.
 
 ```ts
-colorPicker({
+variantPicker({
   format: 'hex', // 'hex' | 'rgb' | 'hsl' | 'oklch'
   alpha: true,
   paletteOnly: false,
   pickerOnly: false,
-  presetType: 'colorPreset',
+  presetType: 'variantPreset',
 })
 
 defineField({
   name: 'brandColor',
-  type: 'colorPicker',
+  type: 'variantPicker',
   options: {paletteOnly: true},
 })
 ```
@@ -67,7 +67,7 @@ defineField({
 | `alpha`       | `true`          | Show the opacity slider and keep alpha in the value.                                                                                                        |
 | `paletteOnly` | `false`         | Only presets: no picker, no custom colors, no saving. A custom value fails validation.                                                                      |
 | `pickerOnly`  | `false`         | Only the picker: no presets, search, saving or references. Wins over `paletteOnly`.                                                                         |
-| `presetType`  | `'colorPreset'` | Name of the preset document type (plugin-level only).                                                                                                       |
+| `presetType`  | `'variantPreset'` | Name of the preset document type (plugin-level only).                                                                                                       |
 | `presets`     | —               | Field-level only. Limit the field to these preset document IDs, in this order. Saving new presets from the field is off, and other presets fail validation. |
 
 Limit a field to some presets, e.g. backgrounds that must stay dark under light text:
@@ -75,17 +75,17 @@ Limit a field to some presets, e.g. backgrounds that must stay dark under light 
 ```ts
 defineField({
   name: 'background',
-  type: 'colorPicker',
-  options: {paletteOnly: true, presets: ['colorPreset-charcoal', 'colorPreset-oxide']},
+  type: 'variantPicker',
+  options: {paletteOnly: true, presets: ['variantPreset-charcoal', 'variantPreset-oxide']},
 })
 ```
 
 ### Color presets
 
-The plugin registers a `colorPreset` document type with a `title` and a `color`. Add it to your structure if you want a list of presets:
+The plugin registers a `variantPreset` document type with a `title` and a `color`. Add it to your structure if you want a list of presets:
 
 ```ts
-S.documentTypeListItem('colorPreset').title('Color presets')
+S.documentTypeListItem('variantPreset').title('Color presets')
 ```
 
 Editors can also create presets from any color field: pick a color, click **Save as preset**, and name it.
@@ -98,7 +98,7 @@ Add text color and highlight to a block's annotations:
 defineArrayMember({
   type: 'block',
   marks: {
-    annotations: [{type: 'colorText'}, {type: 'colorHighlight'}],
+    annotations: [{type: 'variantText'}, {type: 'variantHighlight'}],
   },
 })
 ```
@@ -109,11 +109,11 @@ The Studio editor renders marked text in its color. Each mark stores the same ob
 
 ```ts
 {
-  _type: 'colorPicker',
+  _type: 'variantPicker',
   // Only when a preset was picked:
   reference: {_type: 'reference', _ref: '…', _weak: true},
   value: {
-    _type: 'colorPickerValue',
+    _type: 'variantPickerValue',
     css: '#AE2525', // in the field's `format`, ready to use
     hex: '#AE2525', // always 6-digit, without alpha
     alpha: 1,
@@ -125,7 +125,7 @@ The Studio editor renders marked text in its color. Each mark stores the same ob
 }
 ```
 
-A preset's `color` has the same `colorPickerValue` shape.
+A preset's `color` has the same `variantPickerValue` shape.
 
 When a field references a preset, `value` is a snapshot of the preset's color, taken when the preset was picked. Opening a document never writes to it; it's refreshed the next time an editor changes the field. If a preset's color may change after it's been picked, read the live color first:
 
@@ -150,7 +150,7 @@ content[]{
   ...,
   markDefs[]{
     ...,
-    _type in ["colorText", "colorHighlight"] => {"color": value.css}
+    _type in ["variantText", "variantHighlight"] => {"color": value.css}
   }
 }
 ```
@@ -160,7 +160,7 @@ content[]{
 The color helpers the input uses are exported for frontends that need them:
 
 ```ts
-import {parseColor, formatColor} from 'sanity-plugin-color-select'
+import {parseColor, formatColor} from 'sanity-plugin-variant-picker'
 
 formatColor(parseColor('#AE2525')!, 'oklch') // 'oklch(49.2% 0.173 26.4)'
 ```

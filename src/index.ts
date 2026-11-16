@@ -31,8 +31,8 @@ const channels = (name: string, title: string, keys: string[]) =>
   })
 
 /**
- * Registers a `colorPicker` field type, its `colorPickerValue` object and a preset document
- * type (`colorPreset` by default).
+ * Registers a `variantPicker` field type, its `variantPickerValue` object and a preset document
+ * type (`variantPreset` by default).
  *
  * The input always writes the resolved color to `value` (`css`, `hex`, `alpha`, `rgb`, `hsl`,
  * `hsv`, `oklch`), and also a weak `reference` when it came from a preset, so GROQ can read
@@ -41,14 +41,14 @@ const channels = (name: string, title: string, keys: string[]) =>
  * @example
  * ```ts
  * // sanity.config.ts
- * plugins: [colorPicker({format: 'hex', alpha: true, paletteOnly: false})]
+ * plugins: [variantPicker({format: 'hex', alpha: true, paletteOnly: false})]
  *
  * // schema (field options override the plugin's)
- * defineField({name: 'background', type: 'colorPicker', options: {paletteOnly: true}})
+ * defineField({name: 'background', type: 'variantPicker', options: {paletteOnly: true}})
  * ```
  */
-export const colorPicker = definePlugin<ColorPickerPluginOptions | void>((options) => {
-  const presetType = options?.presetType ?? 'colorPreset'
+export const variantPicker = definePlugin<ColorPickerPluginOptions | void>((options) => {
+  const presetType = options?.presetType ?? 'variantPreset'
   const defaults: Required<ColorOptions> = {
     format: options?.format ?? 'hex',
     alpha: options?.alpha ?? true,
@@ -56,7 +56,7 @@ export const colorPicker = definePlugin<ColorPickerPluginOptions | void>((option
     pickerOnly: options?.pickerOnly ?? false,
   }
 
-  const colorPreset = defineType({
+  const variantPreset = defineType({
     name: presetType,
     title: 'Color preset',
     type: 'document',
@@ -71,7 +71,7 @@ export const colorPicker = definePlugin<ColorPickerPluginOptions | void>((option
       defineField({
         name: 'color',
         title: 'Color',
-        type: 'colorPickerValue',
+        type: 'variantPickerValue',
         validation: (rule) => rule.required(),
         components: {
           input: (props: ObjectInputProps) =>
@@ -93,8 +93,8 @@ export const colorPicker = definePlugin<ColorPickerPluginOptions | void>((option
     },
   })
 
-  const colorPickerValue = defineType({
-    name: 'colorPickerValue',
+  const variantPickerValue = defineType({
+    name: 'variantPickerValue',
     title: 'Color value',
     type: 'object',
     fields: [
@@ -123,7 +123,7 @@ export const colorPicker = definePlugin<ColorPickerPluginOptions | void>((option
       // default annotation popover.
       ...(extra.annotation ? {options: {modal: {type: 'dialog', width: 1}}} : {}),
       fields: [
-        defineField({name: 'value', title: 'Color', type: 'colorPickerValue'}),
+        defineField({name: 'value', title: 'Color', type: 'variantPickerValue'}),
         defineField({
           name: 'reference',
           title: 'Color preset',
@@ -166,23 +166,26 @@ export const colorPicker = definePlugin<ColorPickerPluginOptions | void>((option
       },
     })
 
-  const colorPickerType = colorObjectType('colorPicker', 'Color')
+  const variantPickerType = colorObjectType('variantPicker', 'Color')
   // Portable Text marks: add to a block's `marks.annotations`.
-  const colorText = colorObjectType('colorText', 'Text color', {icon: TextIcon, annotation: 'text'})
-  const colorHighlight = colorObjectType('colorHighlight', 'Highlight', {
+  const variantText = colorObjectType('variantText', 'Text color', {
+    icon: TextIcon,
+    annotation: 'text',
+  })
+  const variantHighlight = colorObjectType('variantHighlight', 'Highlight', {
     icon: HighlightIcon,
     annotation: 'highlight',
   })
 
   return {
-    name: 'color-select',
+    name: 'variant-picker',
     schema: {
       types: [
-        colorPreset,
-        colorPickerValue,
-        colorPickerType,
-        colorText,
-        colorHighlight,
+        variantPreset,
+        variantPickerValue,
+        variantPickerType,
+        variantText,
+        variantHighlight,
       ] as SchemaTypeDefinition[],
     },
   }

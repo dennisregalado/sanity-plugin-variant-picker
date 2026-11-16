@@ -227,7 +227,7 @@ export function checkerboard(color: string): string {
 
 /** The color object the input writes to `value`, so GROQ can read any format directly. */
 export type ColorValue = {
-  _type: 'colorPickerValue'
+  _type: 'variantPickerValue'
   /** Ready-to-use CSS in the field's format, e.g. `rgb(202 165 221 / 0.5)`. */
   css: string
   /** `#RRGGBB`, without alpha (see `alpha`). */
@@ -245,7 +245,7 @@ export function toColorValue(color: Hsva, format: ColorFormat = 'hex', alpha = f
   const hsl = hsvaToHsla(c)
   const oklch = hsvaToOklcha(c)
   return {
-    _type: 'colorPickerValue',
+    _type: 'variantPickerValue',
     css: formatColor(c, format, alpha),
     hex: toHex(c),
     alpha: a,
