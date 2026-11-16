@@ -36,15 +36,17 @@ function ItemList({
   selected?: string
   onSelect: (item: VariantItem) => void
 }) {
+  // The list is the popover's only scroll area: the label stays put, and when the viewport is
+  // short the list shrinks to fit (rather than the card scrolling around a scrolling list).
   return (
-    <Stack gap={1}>
-      <Box paddingX={2} paddingY={3}>
+    <Flex direction="column" gap={1} style={{minHeight: 0}}>
+      <Box paddingX={2} paddingY={3} style={{flexShrink: 0}}>
         <Text size={1} weight="medium">
           {label}
         </Text>
       </Box>
       {items.length > 0 ? (
-        <Stack gap={1} style={{maxHeight: 390, overflowY: 'auto'}}>
+        <Stack gap={1} style={{flex: 1, minHeight: 0, maxHeight: 390, overflowY: 'auto'}}>
           {items.map((item, index) => (
             <Button
               // Lists may repeat a value; the index keeps keys unique.
@@ -67,7 +69,7 @@ function ItemList({
           </Text>
         </Box>
       )}
-    </Stack>
+    </Flex>
   )
 }
 
@@ -248,7 +250,14 @@ export function VariantPickerInput(props: StringInputProps) {
             ref={popoverRef}
             padding={1}
             radius={4}
-            style={{width: 340, maxHeight: 'inherit', overflow: 'auto'}}
+            display="flex"
+            style={{
+              width: 340,
+              maxHeight: 'inherit',
+              minHeight: 0,
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Escape') close()
             }}
