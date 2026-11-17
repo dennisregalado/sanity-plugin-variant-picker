@@ -7,6 +7,7 @@ A Sanity Studio `string` field built like a link picker: one input and a popover
 - **Search**: type to filter by title or value; Enter picks the first match.
 - **Picked value**: shown as a native preview row with a pencil on the right that clears it and reopens the search, like sanity-plugin-color-select.
 - **A plain string value**: stores the picked item's `value`, the same as a native string select.
+- **Existing fields too**: `stringLists: true` puts the picker on every `string` field with an `options.list`, with no schema changes.
 
 ## Install
 
@@ -49,6 +50,34 @@ defineField({
 ```
 
 `icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Set a field's placeholder with `options.placeholder` (default "Search a variant"): Sanity drops a field-level `placeholder` on types that extend `string`. Items without a `value` are skipped.
+
+## Existing string fields
+
+To use the picker on the `string` fields you already have, turn on `stringLists`:
+
+```ts
+plugins: [variantPicker({stringLists: true})]
+```
+
+Every `string` field with a non-empty `options.list` then gets the picker, with no schema changes. The field keeps `type: 'string'`, so `sanity typegen` still generates its literal union (`'sm' | 'md'`). With `type: 'variantPicker'` it generates `string`. Stored values don't change.
+
+It skips:
+
+- **Radio groups** (`options.layout: 'radio'`): every option is visible and one click away, so they stay native. Set `layout: 'dropdown'` (or drop `layout`) to switch one over.
+- **Fields with their own input** (`components.input`, on the field or on a type it extends): those always win.
+
+For a single field instead, keep `type: 'string'` and set the input yourself:
+
+```ts
+import {VariantPickerInput} from 'sanity-plugin-variant-picker'
+
+defineField({
+  name: 'size',
+  type: 'string',
+  options: {list: ['small', 'large']},
+  components: {input: VariantPickerInput},
+})
+```
 
 ## Stored value
 
