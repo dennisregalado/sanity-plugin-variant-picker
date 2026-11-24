@@ -1,4 +1,5 @@
-// Renders the README screenshots into docs/: `node scripts/screenshots/capture.mjs`.
+// Renders the README screenshots into docs/ (or $OUT_DIR, with a trailing slash):
+// `node scripts/screenshots/capture.mjs`.
 // Uses the Chromium that Playwright finds (no `playwright install` needed where it's preinstalled).
 import {createRequire} from 'node:module'
 import {fileURLToPath} from 'node:url'
@@ -10,7 +11,7 @@ import {createServer} from 'vite'
 const {chromium} = createRequire(import.meta.url)('playwright')
 
 const root = fileURLToPath(new URL('.', import.meta.url))
-const docs = fileURLToPath(new URL('../../docs/', import.meta.url))
+const docs = process.env.OUT_DIR ?? fileURLToPath(new URL('../../docs/', import.meta.url))
 
 const server = await createServer({
   root,
