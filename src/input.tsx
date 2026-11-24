@@ -14,17 +14,18 @@ import {filterItems, groupItems, toItems, type VariantItem} from './list'
 const keepInputFocus = (event: React.MouseEvent) => event.preventDefault()
 
 /**
- * An item's title with its icon on the left, as a native compact preview. With a `subtitle`, the
- * native default preview instead, which adds it as a second line.
+ * An item's title with its icon on the left, as a native compact preview. The list uses the
+ * native default preview instead when any item has a `subtitle`, so every row lines up.
  */
 function ItemPreview({
   item,
   subtitle,
+  layout = 'compact',
 }: {
   item: Pick<VariantItem, 'title' | 'icon'>
   subtitle?: string
+  layout?: 'compact' | 'default'
 }) {
-  const layout = subtitle ? 'default' : 'compact'
   // `icon={false}` hides all media, so it only stands in for a missing icon.
   return item.icon ? (
     <SanityDefaultPreview
@@ -62,6 +63,8 @@ function ItemList({
   selected?: string
   onSelect: (item: VariantItem) => void
 }) {
+  // A second line on any row moves the whole list to the taller default layout, so rows align.
+  const layout = items.some((item) => item.description) ? 'default' : 'compact'
   // The list is the popover's only scroll area: the label stays put, and when the viewport is
   // short the list shrinks to fit (rather than the card scrolling around a scrolling list).
   return (
@@ -95,7 +98,7 @@ function ItemList({
                       onMouseDown={keepInputFocus}
                       onClick={() => onSelect(item)}
                     >
-                      <ItemPreview item={item} subtitle={item.description} />
+                      <ItemPreview item={item} subtitle={item.description} layout={layout} />
                     </Button>
                   )
                 })}
