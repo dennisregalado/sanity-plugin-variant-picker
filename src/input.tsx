@@ -5,7 +5,7 @@ import {Tooltip} from '@sanity/ui/tooltip'
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {SanityDefaultPreview, set, unset, type StringInputProps} from 'sanity'
 
-import {filterItems, toItems, type VariantItem} from './list'
+import {filterItems, groupItems, toItems, type VariantItem} from './list'
 
 /**
  * Keep focus in the field while clicking inside the popover. Otherwise the field's blur clears
@@ -13,13 +13,40 @@ import {filterItems, toItems, type VariantItem} from './list'
  */
 const keepInputFocus = (event: React.MouseEvent) => event.preventDefault()
 
-/** An item's title with its icon on the left, as a native compact preview. */
-function ItemPreview({item}: {item: Pick<VariantItem, 'title' | 'icon'>}) {
+/**
+ * An item's title with its icon on the left, as a native compact preview. The list uses the
+ * native default preview instead when any item has a `subtitle`, so every row lines up.
+ */
+function ItemPreview({
+  item,
+  subtitle,
+  layout = 'compact',
+}: {
+  item: Pick<VariantItem, 'title' | 'icon'>
+  subtitle?: string
+  layout?: 'compact' | 'default'
+}) {
   // `icon={false}` hides all media, so it only stands in for a missing icon.
   return item.icon ? (
-    <SanityDefaultPreview layout="compact" title={item.title} media={item.icon} />
+    <SanityDefaultPreview
+      layout={layout}
+      title={item.title}
+      subtitle={subtitle}
+      media={item.icon}
+    />
   ) : (
-    <SanityDefaultPreview layout="compact" title={item.title} icon={false} />
+    <SanityDefaultPreview layout={layout} title={item.title} subtitle={subtitle} icon={false} />
+  )
+}
+
+/** A section header in the list, for items with a `group`. */
+function GroupHeader({title}: {title: string}) {
+  return (
+    <Box paddingX={2} paddingTop={3} paddingBottom={2}>
+      <Text size={1} muted weight="medium">
+        {title}
+      </Text>
+    </Box>
   )
 }
 
@@ -36,6 +63,8 @@ function ItemList({
   selected?: string
   onSelect: (item: VariantItem) => void
 }) {
+  // A second line on any row moves the whole list to the taller default layout, so rows align.
+  const layout = items.some((item) => item.description) ? 'default' : 'compact'
   // The list is the popover's only scroll area: the label stays put, and when the viewport is
   // short the list shrinks to fit (rather than the card scrolling around a scrolling list).
   return (
@@ -47,20 +76,35 @@ function ItemList({
       </Box>
       {items.length > 0 ? (
         <Stack gap={1} style={{flex: 1, minHeight: 0, maxHeight: 390, overflowY: 'auto'}}>
-          {items.map((item, index) => (
-            <Button
-              // Lists may repeat a value; the index keeps keys unique.
-              key={item._key ?? `${item.value}-${index}`}
-              mode="bleed"
-              width="fill"
-              padding={1}
-              selected={item.value === selected}
-              onMouseDown={keepInputFocus}
-              onClick={() => onSelect(item)}
-            >
-              <ItemPreview item={item} />
-            </Button>
-          ))}
+          {groupItems(items).map((group) => {
+            // Items keep their index in the flat `items` array (the render order) across groups.
+            const offset = items.indexOf(group.items[0])
+            return (
+              // Items are gathered by group, so each group (and the ungrouped run) appears once.
+              <React.Fragment
+                key={group.title === undefined ? 'ungrouped' : `group:${group.title}`}
+              >
+                {group.title && <GroupHeader title={group.title} />}
+                {group.items.map((item, i) => {
+                  const index = offset + i
+                  return (
+                    <Button
+                      // Lists may repeat a value; the index keeps keys unique.
+                      key={item._key ?? `${item.value}-${index}`}
+                      mode="bleed"
+                      width="fill"
+                      padding={1}
+                      selected={item.value === selected}
+                      onMouseDown={keepInputFocus}
+                      onClick={() => onSelect(item)}
+                    >
+                      <ItemPreview item={item} subtitle={item.description} layout={layout} />
+                    </Button>
+                  )
+                })}
+              </React.Fragment>
+            )
+          })}
         </Stack>
       ) : (
         <Box paddingX={2} paddingBottom={3}>

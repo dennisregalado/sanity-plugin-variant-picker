@@ -51,6 +51,40 @@ defineField({
 
 `icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Set a field's placeholder with `options.placeholder` (default "Search a variant"): Sanity drops a field-level `placeholder` on types that extend `string`. Items without a `value` are skipped.
 
+## Descriptions, groups and search
+
+Items can add a `description`, a second line under the title, and a `group`, a section header to list them under:
+
+```ts
+defineField({
+  name: 'size',
+  type: 'variantPicker',
+  options: {
+    list: [
+      {title: 'Small', value: 'sm', group: 'Standard', description: 'Fits 2–4'},
+      {title: 'Large', value: 'lg', group: 'Standard', description: 'Fits 6–8'},
+      {title: 'Café table', value: 'cafe', group: 'Custom'},
+      {title: 'Other', value: 'other'}, // no group: listed without a header
+    ],
+  },
+})
+```
+
+- `options.list` stays a flat list of `{title, value}` items, so it still works with Sanity's native select, `stringLists` and typegen (the native input ignores `description` and `group`).
+- Items with the same `group` are listed together, groups in the order they first appear. Items without a `group` form one section with no header, where the first of them appears.
+- The description shows in the list only; the picked row stays one line.
+- Search ignores case and accents ("cafe" finds "Café", "creme" finds "Crème") and matches the title, value, description and group name (searching a group's name shows all of its items). Groups with no matches are hidden, and the result count counts items only.
+
+On a `type: 'string'` field, TypeScript rejects extra keys (`icon`, `description`, `group`) in an inline `options.list`, since Sanity types its items as `{title, value}`. Declare the list separately instead (`type: 'variantPicker'` fields accept them inline):
+
+```ts
+import type {VariantListItem} from 'sanity-plugin-variant-picker'
+
+const sizes = [{title: 'Small', value: 'sm', group: 'Standard'}] satisfies VariantListItem[]
+
+defineField({name: 'size', type: 'string', options: {list: sizes}})
+```
+
 ## Existing string fields
 
 To use the picker on the `string` fields you already have, turn on `stringLists`:
