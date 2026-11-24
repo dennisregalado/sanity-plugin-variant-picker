@@ -17,7 +17,8 @@ export interface VariantPickerConfig {
 /**
  * Registers a `variantPicker` field type: a native `string` with a searchable popover input.
  * It reads `options.list` exactly like a string field (`{title, value}` items or plain strings)
- * and stores the picked item's `value`. With `stringLists: true`, plain `string` list fields get
+ * and stores the picked item's `value`. Items may add an `icon`, a `description` (a second line)
+ * and a `group` (a section header); see {@link VariantListItem}. With `stringLists: true`, plain `string` list fields get
  * the same input.
  *
  * @example
@@ -49,5 +50,13 @@ export const variantPicker = definePlugin<VariantPickerConfig | void>((config) =
 }))
 
 export {VariantPickerInput} from './input'
-export {filterItems, toItems, type VariantItem} from './list'
+export {
+  filterItems,
+  groupItems,
+  normalizeText,
+  toItems,
+  type VariantGroup,
+  type VariantItem,
+  type VariantListItem,
+} from './list'
 export {isPickableStringList} from './stringLists'

@@ -1,7 +1,14 @@
 import React from 'react'
 import {describe, expect, it} from 'vitest'
 
-import {filterItems, toItems} from './list'
+import {
+  filterItems,
+  groupItems,
+  normalizeText,
+  toItems,
+  type VariantGroup,
+  type VariantListItem,
+} from './list'
 
 const Icon = () => React.createElement('svg')
 const ForwardRefIcon = React.forwardRef<SVGSVGElement>(function ForwardRefIcon(_props, ref) {
@@ -77,5 +84,100 @@ describe('filterItems', () => {
 
   it('returns nothing when nothing matches', () => {
     expect(filterItems(items, 'oak')).toEqual([])
+  })
+})
+
+describe('description', () => {
+  it('keeps a trimmed string description and drops blank or non-string ones', () => {
+    const [a, b, c] = toItems([
+      {title: 'A', value: 'a', description: '  Fits 6–8 '},
+      {title: 'B', value: 'b', description: '   '},
+      {title: 'C', value: 'c', description: 3},
+    ] as never)
+    expect(a.description).toBe('Fits 6–8')
+    expect(b).not.toHaveProperty('description')
+    expect(c).not.toHaveProperty('description')
+  })
+})
+
+describe('normalizeText', () => {
+  it('lowercases and strips diacritics', () => {
+    expect(normalizeText('Café')).toBe('cafe')
+    expect(normalizeText('CRÈME Brûlée')).toBe('creme brulee')
+    expect(normalizeText('Ñandú Ångström')).toBe('nandu angstrom')
+  })
+
+  it('folds precomposed and decomposed forms alike', () => {
+    expect(normalizeText('e\u0301')).toBe(normalizeText('\u00e9'))
+  })
+})
+
+describe('groups', () => {
+  const list: VariantListItem[] = [
+    {title: 'Small', value: 'sm', group: 'Sizes'},
+    {title: 'Red', value: 'red', group: 'Colors'},
+    {title: 'Large', value: 'lg', group: 'Sizes'},
+    {title: 'Custom', value: 'custom'},
+    {title: 'Blue', value: 'blue', group: ' Colors '},
+  ]
+
+  it('orders items by group, in order of first appearance, keeping order within a group', () => {
+    expect(toItems(list).map((i) => i.value)).toEqual(['sm', 'lg', 'red', 'blue', 'custom'])
+  })
+
+  it('leaves a list without groups in order and drops blank groups', () => {
+    const items = toItems(['b', {title: 'A', value: 'a', group: ' '}, 'c'] as never)
+    expect(items.map((i) => i.value)).toEqual(['b', 'a', 'c'])
+    expect(items[1]).not.toHaveProperty('group')
+    expect(groupItems(items)).toEqual([{title: undefined, items}])
+  })
+
+  it('splits items into sections, with ungrouped items untitled', () => {
+    const summary = (group: VariantGroup) => [group.title, group.items.map((i) => i.value)]
+    expect(groupItems(toItems(list)).map(summary)).toEqual([
+      ['Sizes', ['sm', 'lg']],
+      ['Colors', ['red', 'blue']],
+      [undefined, ['custom']],
+    ])
+  })
+
+  it('keeps the flat order, for keyboard navigation', () => {
+    const items = toItems(list)
+    expect(groupItems(items).flatMap((g) => g.items)).toEqual(items)
+  })
+
+  it('hides groups emptied by a search and keeps the count of items', () => {
+    const matches = filterItems(toItems(list), 'u')
+    expect(matches.map((i) => i.value)).toEqual(['blue', 'custom'])
+    expect(groupItems(matches).map((g) => g.title)).toEqual(['Colors', undefined])
+    expect(groupItems(filterItems(toItems(list), 'red')).map((g) => g.title)).toEqual(['Colors'])
+  })
+
+  it('matches every item of a group by its name', () => {
+    expect(filterItems(toItems(list), 'size').map((i) => i.value)).toEqual(['sm', 'lg'])
+  })
+
+  it('returns no sections for no items', () => {
+    expect(groupItems([])).toEqual([])
+  })
+})
+
+describe('filterItems: accents and descriptions', () => {
+  const list: VariantListItem[] = [
+    {title: 'Café', value: 'cafe-au-lait'},
+    {title: 'Crème', value: 'creme', description: 'Warm off-white, like crème fraîche'},
+    {title: 'Iron Black', value: 'iron-black', description: 'Matte finish'},
+  ]
+  const items = toItems(list)
+
+  it('matches regardless of accents, either way', () => {
+    expect(filterItems(items, 'cafe').map((i) => i.title)).toEqual(['Café'])
+    expect(filterItems(items, 'CAFÉ').map((i) => i.title)).toEqual(['Café'])
+    expect(filterItems(items, 'creme').map((i) => i.title)).toEqual(['Crème'])
+  })
+
+  it('matches the description', () => {
+    expect(filterItems(items, 'matte').map((i) => i.value)).toEqual(['iron-black'])
+    expect(filterItems(items, 'fraiche').map((i) => i.value)).toEqual(['creme'])
   })
 })
