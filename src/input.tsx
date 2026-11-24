@@ -2,8 +2,8 @@ import {EditIcon} from '@sanity/icons/Edit'
 import {Box, Button, Card, Flex, Stack, Text, TextInput, useClickOutsideEvent} from '@sanity/ui'
 import {Popover} from '@sanity/ui/popover'
 import {Tooltip} from '@sanity/ui/tooltip'
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {SanityDefaultPreview, set, unset, type StringInputProps} from 'sanity'
+import React, {useCallback, useMemo, useRef, useState} from 'react'
+import {SanityDefaultPreview, set, type StringInputProps, unset} from 'sanity'
 
 import {filterItems, toItems, type VariantItem} from './list'
 
@@ -20,6 +20,30 @@ function ItemPreview({item}: {item: Pick<VariantItem, 'title' | 'icon'>}) {
     <SanityDefaultPreview layout="compact" title={item.title} media={item.icon} />
   ) : (
     <SanityDefaultPreview layout="compact" title={item.title} icon={false} />
+  )
+}
+
+function ItemButton({
+  item,
+  selected,
+  onSelect,
+}: {
+  item: VariantItem
+  selected: boolean
+  onSelect: (picked: VariantItem) => void
+}) {
+  const handleClick = useCallback(() => onSelect(item), [item, onSelect])
+  return (
+    <Button
+      mode="bleed"
+      width="fill"
+      padding={1}
+      selected={selected}
+      onMouseDown={keepInputFocus}
+      onClick={handleClick}
+    >
+      <ItemPreview item={item} />
+    </Button>
   )
 }
 
@@ -48,18 +72,13 @@ function ItemList({
       {items.length > 0 ? (
         <Stack gap={1} style={{flex: 1, minHeight: 0, maxHeight: 390, overflowY: 'auto'}}>
           {items.map((item, index) => (
-            <Button
+            <ItemButton
               // Lists may repeat a value; the index keeps keys unique.
               key={item._key ?? `${item.value}-${index}`}
-              mode="bleed"
-              width="fill"
-              padding={1}
+              item={item}
               selected={item.value === selected}
-              onMouseDown={keepInputFocus}
-              onClick={() => onSelect(item)}
-            >
-              <ItemPreview item={item} />
-            </Button>
+              onSelect={onSelect}
+            />
           ))}
         </Stack>
       ) : (
@@ -106,6 +125,12 @@ function SelectedItem({
   onEscape: () => void
   onReplace: () => void
 }) {
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Escape') onEscape()
+    },
+    [onEscape],
+  )
   return (
     <Card border radius={2} overflow="hidden" tone={invalid ? 'critical' : undefined}>
       <Flex align="center" style={{height: 33}}>
@@ -127,9 +152,7 @@ function SelectedItem({
               onFocus={onFieldFocus}
               onBlur={onFieldBlur}
               onClick={onOpen}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') onEscape()
-              }}
+              onKeyDown={handleKeyDown}
             >
               <ItemPreview item={item} />
             </Button>
@@ -173,7 +196,7 @@ function assignRefs<T>(node: T | null, ...refs: Array<React.Ref<T> | undefined>)
  * field's `options.list` (typing searches it); with a value, the picked item, which opens the
  * same list, and a pencil that clears it and reopens the search.
  */
-export function VariantPickerInput(props: StringInputProps) {
+export function VariantPickerInput(props: StringInputProps): React.JSX.Element {
   const {value, onChange, readOnly, elementProps, schemaType, validationError, validation} = props
   const invalid = validation.some((marker) => marker.level === 'error')
   // Sanity drops a field-level `placeholder` on types that extend `string` (only `options` and a
@@ -191,20 +214,12 @@ export function VariantPickerInput(props: StringInputProps) {
   const [open, setOpen] = useState(false)
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
   // Set by the pencil: focus the input once it's rendered (after the value is cleared).
   const focusPending = useRef(false)
   // Text typed in the field: a search over the list.
   const [typed, setTyped] = useState<string | null>(null)
   const query = typed ?? ''
   const matches = useMemo(() => filterItems(items, query), [items, query])
-
-  useEffect(() => {
-    if (focusPending.current && inputRef.current) {
-      focusPending.current = false
-      inputRef.current.focus()
-    }
-  })
 
   const close = useCallback(() => {
     setOpen(false)
@@ -213,21 +228,76 @@ export function VariantPickerInput(props: StringInputProps) {
 
   useClickOutsideEvent(open && close, () => [container, popoverRef.current])
 
-  const select = (item: VariantItem) => {
-    if (item.value !== value) onChange(set(item.value))
-    close()
-  }
+  const select = useCallback(
+    (item: VariantItem) => {
+      if (item.value !== value) onChange(set(item.value))
+      close()
+    },
+    [value, onChange, close],
+  )
 
   // Pencil: clear the value and reopen the popover to pick anew.
-  const replace = () => {
+  const replace = useCallback(() => {
     setTyped(null)
     onChange(unset())
     setOpen(true)
     focusPending.current = true
-  }
+  }, [onChange])
 
+  const toggleOpen = useCallback(() => setOpen((wasOpen) => !wasOpen), [])
+  const openList = useCallback(() => setOpen(true), [])
+
+  const handleEscape = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Escape') close()
+    },
+    [close],
+  )
+
+  const elementRef = elementProps.ref as React.Ref<HTMLInputElement> | undefined
+  // The search input mounts when the value is cleared; after the pencil, focus it right away.
+  const setInputRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      assignRefs(node, elementRef)
+      if (node && focusPending.current) {
+        focusPending.current = false
+        node.focus()
+      }
+    },
+    [elementRef],
+  )
+
+  const {onFocus: onFieldFocus, onBlur: onFieldBlur} = elementProps
+  const handleFocus = useCallback(
+    (event: React.FocusEvent<HTMLInputElement>) => {
+      onFieldFocus(event)
+      setOpen(true)
+    },
+    [onFieldFocus],
+  )
+  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setTyped(event.currentTarget.value)
+    setOpen(true)
+  }, [])
   // Leaving the field drops the search.
-  const commitTyped = () => setTyped(null)
+  const handleBlur = useCallback(
+    (event: React.FocusEvent<HTMLInputElement>) => {
+      onFieldBlur(event)
+      setTyped(null)
+    },
+    [onFieldBlur],
+  )
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        // Enter picks the first match of a search.
+        if (query.trim() && matches[0]) select(matches[0])
+      }
+      if (event.key === 'Escape') close()
+    },
+    [query, matches, select, close],
+  )
 
   let label = 'Variants'
   if (query.trim()) label = `${matches.length} ${matches.length === 1 ? 'result' : 'results'}`
@@ -258,9 +328,7 @@ export function VariantPickerInput(props: StringInputProps) {
               flexDirection: 'column',
               overflow: 'hidden',
             }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') close()
-            }}
+            onKeyDown={handleEscape}
           >
             <ItemList
               items={matches}
@@ -286,20 +354,14 @@ export function VariantPickerInput(props: StringInputProps) {
             onFieldBlur={
               elementProps.onBlur as unknown as React.FocusEventHandler<HTMLButtonElement>
             }
-            onOpen={() => setOpen((wasOpen) => !wasOpen)}
+            onOpen={toggleOpen}
             onEscape={close}
             onReplace={replace}
           />
         ) : (
           <TextInput
             {...elementProps}
-            ref={(node) =>
-              assignRefs(
-                node,
-                inputRef,
-                elementProps.ref as React.Ref<HTMLInputElement> | undefined,
-              )
-            }
+            ref={setInputRef}
             readOnly={readOnly}
             customValidity={validationError}
             placeholder={placeholder}
@@ -307,27 +369,11 @@ export function VariantPickerInput(props: StringInputProps) {
             weight="medium"
             value={query}
             style={{height: 35}}
-            onFocus={(event) => {
-              elementProps.onFocus(event)
-              setOpen(true)
-            }}
-            onClick={() => setOpen(true)}
-            onChange={(event) => {
-              setTyped(event.currentTarget.value)
-              setOpen(true)
-            }}
-            onBlur={(event) => {
-              elementProps.onBlur(event)
-              commitTyped()
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                // Enter picks the first match of a search.
-                if (query.trim() && matches[0]) select(matches[0])
-              }
-              if (event.key === 'Escape') close()
-            }}
+            onFocus={handleFocus}
+            onClick={openList}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
           />
         )}
       </Box>
