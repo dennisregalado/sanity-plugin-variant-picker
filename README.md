@@ -2,6 +2,11 @@
 
 A Sanity Studio `string` field built like a link picker: one input and a popover that searches the field's `options.list`. Forked from [sanity-plugin-color-select](https://github.com/dennisregalado/sanity-plugin-color-select).
 
+<p>
+  <img src="https://raw.githubusercontent.com/dennisregalado/sanity-plugin-variant-picker/master/docs/empty.png" alt="The empty field, focused: a search input with a popover listing Circle, Square, Triangle, Hexagon and Star, each with its icon" width="380">
+  <img src="https://raw.githubusercontent.com/dennisregalado/sanity-plugin-variant-picker/master/docs/picked.png" alt="The field with Square picked: its icon and title in a row, with a pencil on the right" width="380">
+</p>
+
 - **Native options**: reads `options.list` exactly like a `string` field, so `{title, value}` items and plain strings both work.
 - **Icons**: give an item an `icon` and it shows on the left, in the list and on the picked value.
 - **Search**: type to filter by title or value; Enter picks the first match.
@@ -49,7 +54,21 @@ defineField({
 })
 ```
 
-`icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Set a field's placeholder with `options.placeholder` (default "Search a variant"): Sanity drops a field-level `placeholder` on types that extend `string`. Items without a `value` are skipped.
+`icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Items without a `value` are skipped.
+
+### Placeholder
+
+Set it with `options.placeholder` (default "Search a variant"), not the field's `placeholder`:
+
+```ts
+defineField({
+  name: 'size',
+  type: 'variantPicker',
+  options: {list: ['small', 'large'], placeholder: 'Pick a size'},
+})
+```
+
+Why `options`: Sanity drops a field-level `placeholder` on types that extend `string` (such as `variantPicker`); only `options` and a few other keys carry over to the field. A `placeholder` set directly on a plain `string` field still works as a fallback.
 
 ## Existing string fields
 
@@ -89,6 +108,15 @@ The picked item's `value`, as a string:
 ```
 
 The pencil unsets the value; leaving the field without picking keeps it empty.
+
+## Development
+
+```sh
+bun install
+npm run lint && npm run typecheck && npm test && npm run build
+```
+
+Component tests (`src/*.test.tsx`) run in jsdom with Testing Library. To re-render the screenshots above into `docs/` (needs Playwright with Chromium installed globally): `npm run docs:screenshots`.
 
 ## Releasing
 
