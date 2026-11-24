@@ -8,6 +8,8 @@ A Sanity Studio `string` field built like a link picker: one input and a popover
 - **Picked value**: shown as a native preview row with a pencil on the right that clears it and reopens the search, like sanity-plugin-color-select.
 - **A plain string value**: stores the picked item's `value`, the same as a native string select.
 - **Existing fields too**: `stringLists: true` puts the picker on every `string` field with an `options.list`, with no schema changes.
+- **Your wording**: the placeholder, list heading, empty states and pencil label are configurable per field or for the whole Studio.
+- **Fits the field**: the list is as wide as the field (at least 280px, never wider than the screen) and opens scrolled to the picked item.
 
 ## Install
 
@@ -49,7 +51,40 @@ defineField({
 })
 ```
 
-`icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Set a field's placeholder with `options.placeholder` (default "Search a variant"): Sanity drops a field-level `placeholder` on types that extend `string`. Items without a `value` are skipped.
+`icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Items without a `value` are skipped.
+
+## Wording
+
+The picker talks about "variants" by default. Change any of its strings per field with `options.labels`, or for every picker in the workspace with the plugin's `labels`:
+
+```ts
+// One field
+defineField({
+  name: 'size',
+  type: 'variantPicker',
+  options: {
+    list: ['sm', 'md', 'lg'],
+    labels: {
+      placeholder: 'Search a size', // default "Search a variant"
+      listTitle: 'Sizes', // default "Variants"
+      replace: 'Replace size', // pencil tooltip and aria-label; default "Replace variant"
+      empty: 'No sizes', // empty options.list; default "No variants"
+      noMatches: 'No sizes match “{query}”', // default "No variants match “{query}”"
+      results: (count) => `${count} ${count === 1 ? 'size' : 'sizes'}`, // default "N results"
+    },
+  },
+})
+
+// Every picker in the workspace (variantPicker fields, stringLists fields, and fields that set
+// VariantPickerInput themselves)
+plugins: [variantPicker({labels: {placeholder: 'Search an option', listTitle: 'Options'}})]
+```
+
+`noMatches` and `results` take a template (`{query}` is the search text, `{count}` the number of matches) or a function, for plurals. Each string is looked up in order: the field's `options.labels`, the field's `options.placeholder` (placeholder only), the plugin's `labels`, then the default. An unset or empty string falls through to the next one.
+
+`options.placeholder` still works: Sanity drops a field-level `placeholder` on types that extend `string`, so it's the short way to set just the placeholder. The plugin adds `labels` and `placeholder` to Sanity's `StringOptions` type, so `defineField` accepts them on `type: 'string'` fields too. The option types are exported as `VariantPickerLabels` and `VariantPickerOptions`.
+
+The defaults don't come from the field's `title`: "Search size" or a guessed plural like "Sizes" reads wrong for many titles (and languages), so set the wording you want.
 
 ## Existing string fields
 

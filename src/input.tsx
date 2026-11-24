@@ -2,10 +2,12 @@ import {EditIcon} from '@sanity/icons/Edit'
 import {Box, Button, Card, Flex, Stack, Text, TextInput, useClickOutsideEvent} from '@sanity/ui'
 import {Popover} from '@sanity/ui/popover'
 import {Tooltip} from '@sanity/ui/tooltip'
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import React, {useEffect, useMemo, useRef, useState} from 'react'
 import {SanityDefaultPreview, set, unset, type StringInputProps} from 'sanity'
 
+import {fieldLabels, formatLabel, usePluginLabels} from './labels'
 import {filterItems, toItems, type VariantItem} from './list'
+import {scrollSelectedIntoView} from './scroll'
 
 /**
  * Keep focus in the field while clicking inside the popover. Otherwise the field's blur clears
@@ -28,14 +30,24 @@ function ItemList({
   label,
   empty,
   selected,
+  open,
   onSelect,
 }: {
   items: VariantItem[]
   label: string
   empty: string
   selected?: string
+  /** The popover is showing: the picked item is scrolled into view each time it opens. */
+  open?: boolean
   onSelect: (item: VariantItem) => void
 }) {
+  const listRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!open) return undefined
+    // After the popover has sized itself (its max height comes in a layout pass).
+    const frame = requestAnimationFrame(() => scrollSelectedIntoView(listRef.current))
+    return () => cancelAnimationFrame(frame)
+  }, [open])
   // The list is the popover's only scroll area: the label stays put, and when the viewport is
   // short the list shrinks to fit (rather than the card scrolling around a scrolling list).
   return (
@@ -46,7 +58,11 @@ function ItemList({
         </Text>
       </Box>
       {items.length > 0 ? (
-        <Stack gap={1} style={{flex: 1, minHeight: 0, maxHeight: 390, overflowY: 'auto'}}>
+        <Stack
+          ref={listRef}
+          gap={1}
+          style={{flex: 1, minHeight: 0, maxHeight: 390, overflowY: 'auto'}}
+        >
           {items.map((item, index) => (
             <Button
               // Lists may repeat a value; the index keeps keys unique.
@@ -89,6 +105,7 @@ function SelectedItem({
   onOpen,
   onEscape,
   onReplace,
+  replaceLabel,
 }: {
   item: Pick<VariantItem, 'title' | 'icon'>
   readOnly?: boolean
@@ -105,6 +122,8 @@ function SelectedItem({
   onOpen: () => void
   onEscape: () => void
   onReplace: () => void
+  /** The pencil's tooltip and accessible name. */
+  replaceLabel: string
 }) {
   return (
     <Card border radius={2} overflow="hidden" tone={invalid ? 'critical' : undefined}>
@@ -142,12 +161,12 @@ function SelectedItem({
             placement="top"
             content={
               <Text size={1} weight="medium">
-                Replace variant
+                {replaceLabel}
               </Text>
             }
           >
             <Button
-              aria-label="Replace variant"
+              aria-label={replaceLabel}
               icon={EditIcon}
               mode="bleed"
               style={{clipPath: 'inset(3px round 2px)'}}
@@ -176,12 +195,9 @@ function assignRefs<T>(node: T | null, ...refs: Array<React.Ref<T> | undefined>)
 export function VariantPickerInput(props: StringInputProps) {
   const {value, onChange, readOnly, elementProps, schemaType, validationError, validation} = props
   const invalid = validation.some((marker) => marker.level === 'error')
-  // Sanity drops a field-level `placeholder` on types that extend `string` (only `options` and a
-  // few other keys carry over), so `options.placeholder` is the way to set one per field.
-  const placeholder =
-    (schemaType.options as {placeholder?: string} | undefined)?.placeholder ||
-    (schemaType as {placeholder?: string}).placeholder ||
-    'Search a variant'
+  // Field `options.labels` / `options.placeholder`, then `variantPicker({labels})`, then defaults.
+  const pluginLabels = usePluginLabels()
+  const labels = fieldLabels(schemaType, pluginLabels)
   const items = useMemo(() => toItems(schemaType.options?.list), [schemaType.options?.list])
   // A stored value missing from the list still shows, as its raw value.
   const selected = value
@@ -206,10 +222,10 @@ export function VariantPickerInput(props: StringInputProps) {
     }
   })
 
-  const close = useCallback(() => {
+  const close = () => {
     setOpen(false)
     setTyped(null)
-  }, [])
+  }
 
   useClickOutsideEvent(open && close, () => [container, popoverRef.current])
 
@@ -229,9 +245,9 @@ export function VariantPickerInput(props: StringInputProps) {
   // Leaving the field drops the search.
   const commitTyped = () => setTyped(null)
 
-  let label = 'Variants'
-  if (query.trim()) label = `${matches.length} ${matches.length === 1 ? 'result' : 'results'}`
-  const empty = query.trim() ? `No variants match “${query.trim()}”` : 'No variants'
+  const trimmed = query.trim()
+  const label = trimmed ? formatLabel(labels.results, 'count', matches.length) : labels.listTitle
+  const empty = trimmed ? formatLabel(labels.noMatches, 'query', trimmed) : labels.empty
 
   return (
     <>
@@ -243,6 +259,8 @@ export function VariantPickerInput(props: StringInputProps) {
         fallbackPlacements={['top-start']}
         animate
         constrainSize
+        // As wide as the field, but never narrower than a comfortable list (nor than the viewport).
+        matchReferenceWidth
         radius={4}
         shadow={3}
         content={
@@ -252,7 +270,7 @@ export function VariantPickerInput(props: StringInputProps) {
             radius={4}
             display="flex"
             style={{
-              width: 340,
+              minWidth: 'min(280px, calc(100vw - 16px))',
               maxHeight: 'inherit',
               minHeight: 0,
               flexDirection: 'column',
@@ -267,6 +285,7 @@ export function VariantPickerInput(props: StringInputProps) {
               label={label}
               empty={empty}
               selected={value}
+              open={open && !readOnly}
               onSelect={select}
             />
           </Card>
@@ -289,6 +308,7 @@ export function VariantPickerInput(props: StringInputProps) {
             onOpen={() => setOpen((wasOpen) => !wasOpen)}
             onEscape={close}
             onReplace={replace}
+            replaceLabel={labels.replace}
           />
         ) : (
           <TextInput
@@ -302,7 +322,7 @@ export function VariantPickerInput(props: StringInputProps) {
             }
             readOnly={readOnly}
             customValidity={validationError}
-            placeholder={placeholder}
+            placeholder={labels.placeholder}
             fontSize={1}
             weight="medium"
             value={query}
