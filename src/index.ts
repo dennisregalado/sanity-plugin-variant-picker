@@ -1,6 +1,8 @@
 import {definePlugin, defineType} from 'sanity'
 
 import {VariantPickerInput} from './input'
+import type {VariantPickerLabels} from './labels'
+import {createLabelsLayout} from './labelsLayout'
 import {StringListInput} from './stringLists'
 
 /** Options for {@link variantPicker}. */
@@ -12,6 +14,35 @@ export interface VariantPickerConfig {
    * left alone. Default `false`.
    */
   stringLists?: boolean
+  /**
+   * The picker's wording for every field in the workspace (`variantPicker` fields, `stringLists`
+   * fields and fields that set `VariantPickerInput` themselves). A field's own `options.labels`
+   * and `options.placeholder` win over these. Unset keys keep the defaults.
+   *
+   * @example
+   * ```ts
+   * variantPicker({labels: {placeholder: 'Search an option', listTitle: 'Options'}})
+   * ```
+   */
+  labels?: VariantPickerLabels
+}
+
+/**
+ * The `options` the picker reads on top of a `string` field's `list`. They're also added to
+ * Sanity's `StringOptions`, so `defineField` accepts them on `string` fields (for `stringLists`
+ * or a field that sets `VariantPickerInput`).
+ */
+export interface VariantPickerOptions {
+  /** The search input's placeholder. Same as `labels.placeholder`, which wins if both are set. */
+  placeholder?: string
+  /** This field's wording; unset keys fall back to `variantPicker({labels})`, then the defaults. */
+  labels?: VariantPickerLabels
+}
+
+declare module 'sanity' {
+  // Declaration merging: the picker's options on string fields.
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface StringOptions extends VariantPickerOptions {}
 }
 
 /**
@@ -46,8 +77,16 @@ export const variantPicker = definePlugin<VariantPickerConfig | void>((config) =
     ],
   },
   ...(config?.stringLists ? {form: {components: {input: StringListInput}}} : {}),
+  ...(config?.labels ? {studio: {components: {layout: createLabelsLayout(config.labels)}}} : {}),
 }))
 
 export {VariantPickerInput} from './input'
+export {
+  defaultLabels,
+  formatLabel,
+  type ResolvedVariantPickerLabels,
+  resolveLabels,
+  type VariantPickerLabels,
+} from './labels'
 export {filterItems, toItems, type VariantItem} from './list'
 export {isPickableStringList} from './stringLists'
