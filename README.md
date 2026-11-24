@@ -4,8 +4,10 @@ A Sanity Studio `string` field built like a link picker: one input and a popover
 
 - **Native options**: reads `options.list` exactly like a `string` field, so `{title, value}` items and plain strings both work.
 - **Icons**: give an item an `icon` and it shows on the left, in the list and on the picked value.
-- **Search**: type to filter by title or value; Enter picks the first match.
-- **Picked value**: shown as a native preview row with a pencil on the right that clears it and reopens the search, like sanity-plugin-color-select.
+- **Search**: type to filter by title or value; Enter picks the highlighted item, or the first match.
+- **Keyboard and screen readers**: a combobox with a listbox popup. Arrow keys move the highlight, Enter picks, Escape or Tab closes. See [Keyboard](#keyboard).
+- **Picked value**: shown as a native preview row, like sanity-plugin-color-select. The row and the pencil open the search; the value stays until you pick another. An × clears it on fields that aren't required.
+- **Values not in the list**: a stored value missing from `options.list` (a typo, or a removed option) is marked "Not in list" in a caution tone.
 - **A plain string value**: stores the picked item's `value`, the same as a native string select.
 - **Existing fields too**: `stringLists: true` puts the picker on every `string` field with an `options.list`, with no schema changes.
 
@@ -51,6 +53,20 @@ defineField({
 
 `icon` takes a component (e.g. from `@sanity/icons`), an element, or an emoji string. Set a field's placeholder with `options.placeholder` (default "Search a variant"): Sanity drops a field-level `placeholder` on types that extend `string`. Items without a `value` are skipped.
 
+## Keyboard
+
+| Where      | Key                   | Does                                                         |
+| ---------- | --------------------- | ------------------------------------------------------------ |
+| Search     | typing                | Filters the list and highlights the first match              |
+| Search     | ↓ / ↑                 | Opens the list, then moves the highlight (wrapping)          |
+| Search     | Enter                 | Picks the highlighted item (or the first match)              |
+| Search     | Escape                | Closes the list and drops the search; the value is unchanged |
+| Search     | Tab                   | Leaves the field and closes the list; the value is unchanged |
+| Picked row | Enter / Space / ↓ / ↑ | Opens the search with the picked item highlighted            |
+| Picked row | a letter              | Opens the search with that letter typed                      |
+
+After a pick, focus moves to the picked row. The search input is a `role="combobox"` with `aria-expanded`, `aria-controls` and `aria-activedescendant`. The list is a `role="listbox"`, and each item is a `role="option"` with `aria-selected` on the stored value.
+
 ## Existing string fields
 
 To use the picker on the `string` fields you already have, turn on `stringLists`:
@@ -88,7 +104,7 @@ The picked item's `value`, as a string:
 // {"size": "sm"}
 ```
 
-The pencil unsets the value; leaving the field without picking keeps it empty.
+The value changes only when you pick an item, or clear it. The row and the pencil open the search over the current value. Escape, Tab or a click outside closes it and keeps the old value. The × unsets the value. It only shows when the field isn't required (`validation: (rule) => rule.required()`).
 
 ## Releasing
 
